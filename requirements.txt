@@ -1,2 +1,6 @@
 pyspark==4.2.0
 pytest
+mlflow 
+scikit-learn 
+pandas 
+pyarrow
