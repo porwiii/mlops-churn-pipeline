@@ -4,13 +4,10 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (
-    accuracy_score,
-    precision_score,
-    recall_score,
-    f1_score,
-    roc_auc_score,
-)
+from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_score, roc_auc_score)
+import mlflow
+import mlflow.sklearn
+
 
 df = pd.read_parquet("data/processed/churn")
 
@@ -36,7 +33,7 @@ def train_model(df: pd.DataFrame):
     # Train LogisticRegression
     model = Pipeline(
         [("preprocessor", ct), 
-         ("classifier", LogisticRegression(max_iter=1000, random_state=42))]
+         ("classifier", LogisticRegression(max_iter=1000, random_state=42, C=1.0))]
          )
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
@@ -52,10 +49,45 @@ def train_model(df: pd.DataFrame):
     return model, metrics
 
 
-if __name__ == "__main__":
+def main():
+    mlflow.set_tracking_uri("http://127.0.0.1:5000")
+    mlflow.set_experiment("churn-prediction")
+
     df = pd.read_parquet("data/processed/churn")
 
-    model, metrics = train_model(df)
+    with mlflow.start_run(run_name="logistic-regression-baseline"):
+        model, metrics = train_model(df)
 
-    for name, value in metrics.items():
-        print(f"{name}: {value:.4f}")
+        # Log model parameters
+        mlflow.log_param("model_type", "LogisticRegression")
+        mlflow.log_param("test_size", 0.2)
+        mlflow.log_param("random_state", model.named_steps["classifier"].random_state)
+        mlflow.log_param("C", model.named_steps["classifier"].C)
+
+        # Log evaluation metrics
+        mlflow.log_metrics(metrics)
+
+        # Save the trained model
+        model_info = mlflow.sklearn.log_model(
+            sk_model=model,
+            name="churn-model",
+            input_example=df.drop(columns=["customerID", "Churn"]).head(3)
+        )
+
+        print("Metrics:", metrics)
+        print("Model URI:", model_info.model_uri)
+
+        loaded_model = mlflow.sklearn.load_model(
+            model_info.model_uri
+        )
+
+        X_sample = df.drop(columns=["customerID", "Churn"]).head(5)
+
+        predictions = loaded_model.predict(X_sample)
+
+        print("Predictions from loaded model:", predictions)
+
+
+
+if __name__ == "__main__":
+    main()

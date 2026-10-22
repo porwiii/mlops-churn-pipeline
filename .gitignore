@@ -227,5 +227,7 @@ data/processed/
 /.vscode
 
 # mlflow
-mlruns/
 mlflow.db
+mlflow.db-*
+mlartifacts/
+mlruns/
