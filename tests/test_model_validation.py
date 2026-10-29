@@ -23,3 +23,11 @@ def test_model_border():
     }
 
     assert validate_model(metrics) is True
+
+def test_model_nan():
+    metrics = {
+        "f1": float("nan"),
+        "roc_auc": 0.80
+    }
+
+    assert validate_model(metrics) is False

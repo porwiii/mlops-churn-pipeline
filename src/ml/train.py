@@ -9,6 +9,7 @@ import mlflow
 import mlflow.sklearn
 
 from src.ml.validate import validate_model
+from mlflow import MlflowClient
 
 
 df = pd.read_parquet("data/processed/churn")
@@ -57,11 +58,11 @@ def train_model(df: pd.DataFrame):
     y_pred = model.predict(X_val)
     y_proba = model.predict_proba(X_val)[:, 1]
     # Calculate metrics
-    metrics = {"accuracy": accuracy_score(y_test, y_val),
-               "precision": precision_score(y_test, y_val),
-               "recall": recall_score(y_test, y_val),
-               "f1": f1_score(y_test, y_val),
-               "roc_auc": roc_auc_score(y_test, y_val)
+    metrics = {"accuracy": accuracy_score(y_val, y_pred),
+               "precision": precision_score(y_val, y_pred),
+               "recall": recall_score(y_val, y_pred),
+               "f1": f1_score(y_val, y_pred),
+               "roc_auc": roc_auc_score(y_val, y_proba)
                }
 
     return model, metrics
@@ -113,6 +114,25 @@ def main():
 
         print("Metrics:", metrics)
         print("Model URI:", model_info.model_uri)
+
+        # Register the accepted model
+        registered_model = mlflow.register_model(
+            model_uri=model_info.model_uri,
+            name="churn-classifier"
+        )
+
+        client = MlflowClient()
+
+        # Mark this model version as validated
+        client.set_model_version_tag(
+            name="churn-classifier",
+            version=registered_model.version,
+            key="validation_status",
+            value="accepted"
+        )
+
+        print("Registered model version:", registered_model.version)
+
 
         # loaded_model = mlflow.sklearn.load_model(
         #     model_info.model_uri
