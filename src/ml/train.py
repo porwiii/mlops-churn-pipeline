@@ -8,6 +8,8 @@ from sklearn.metrics import (accuracy_score, precision_score, recall_score, f1_s
 import mlflow
 import mlflow.sklearn
 
+from src.ml.validate import validate_model
+
 
 df = pd.read_parquet("data/processed/churn")
 
@@ -18,8 +20,24 @@ def train_model(df: pd.DataFrame):
     # Separate X and y
     y = df["Churn"]
     X = df.drop(["customerID", "Churn"], axis=1)
+
     # Train/test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, stratify=y, test_size=0.2)
+    # 80% train+validation, 20% test
+    X_dev, X_test, y_dev, y_test = train_test_split(
+        X, y,
+        test_size=0.2,
+        random_state=42,
+        stratify=y
+    )
+
+    # 75% z pozostałych 80% = 60% całego zbioru
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_dev, y_dev,
+        test_size=0.25,
+        random_state=42,
+        stratify=y_dev
+    )
+
     # Create preprocessing pipeline
     numeric_features = X.select_dtypes(include=["number"]).columns.tolist()
     categorical_features = X.select_dtypes(
@@ -36,14 +54,14 @@ def train_model(df: pd.DataFrame):
          ("classifier", LogisticRegression(max_iter=1000, random_state=42, C=1.0))]
          )
     model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    y_proba = model.predict_proba(X_test)[:, 1]
+    y_pred = model.predict(X_val)
+    y_proba = model.predict_proba(X_val)[:, 1]
     # Calculate metrics
-    metrics = {"accuracy": accuracy_score(y_test, y_pred),
-               "precision": precision_score(y_test, y_pred),
-               "recall": recall_score(y_test, y_pred),
-               "f1": f1_score(y_test, y_pred),
-               "roc_auc": roc_auc_score(y_test, y_proba)
+    metrics = {"accuracy": accuracy_score(y_test, y_val),
+               "precision": precision_score(y_test, y_val),
+               "recall": recall_score(y_test, y_val),
+               "f1": f1_score(y_test, y_val),
+               "roc_auc": roc_auc_score(y_test, y_val)
                }
 
     return model, metrics
@@ -55,38 +73,56 @@ def main():
 
     df = pd.read_parquet("data/processed/churn")
 
-    with mlflow.start_run(run_name="logistic-regression-baseline"):
+    with mlflow.start_run():
         model, metrics = train_model(df)
 
-        # Log model parameters
-        mlflow.log_param("model_type", "LogisticRegression")
-        mlflow.log_param("test_size", 0.2)
-        mlflow.log_param("random_state", model.named_steps["classifier"].random_state)
-        mlflow.log_param("C", model.named_steps["classifier"].C)
+        mlflow.log_params({
+            "model_type": "LogisticRegression",
+            "C": model.named_steps["classifier"].C,
+            "random_state": 42,
+            "train_ratio": 0.6,
+            "validation_ratio": 0.2,
+            "test_ratio": 0.2,
+        })
 
-        # Log evaluation metrics
         mlflow.log_metrics(metrics)
 
-        # Save the trained model
+        # Evaluate quality gate
+        accepted = validate_model(metrics)
+
+        mlflow.set_tag(
+            "validation_status",
+            "accepted" if accepted else "rejected"
+        )
+
+        print("Metrics:", metrics)
+        print("Accepted:", accepted)
+
+        if not accepted:
+            raise ValueError(
+                "Model failed validation quality gate"
+            )
+
         model_info = mlflow.sklearn.log_model(
             sk_model=model,
             name="churn-model",
-            input_example=df.drop(columns=["customerID", "Churn"]).head(3)
+            input_example=df.drop(
+                columns=["customerID", "Churn"]
+            ).head(3)
         )
 
         print("Metrics:", metrics)
         print("Model URI:", model_info.model_uri)
 
-        loaded_model = mlflow.sklearn.load_model(
-            model_info.model_uri
-        )
+        # loaded_model = mlflow.sklearn.load_model(
+        #     model_info.model_uri
+        # )
 
-        X_sample = df.drop(columns=["customerID", "Churn"]).head(5)
+        # X_sample = df.drop(columns=["customerID", "Churn"]).head(5)
 
-        predictions = loaded_model.predict(X_sample)
+        # predictions = loaded_model.predict(X_sample)
 
-        print("Predictions from loaded model:", predictions)
-
+        # print("Predictions from loaded model:", predictions)
 
 
 if __name__ == "__main__":
