@@ -4,3 +4,5 @@ mlflow
 scikit-learn 
 pandas 
 pyarrow
+"fastapi[standard]" 
+httpx
