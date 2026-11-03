@@ -231,3 +231,4 @@ mlflow.db
 mlflow.db-*
 mlartifacts/
 mlruns/
+mlflow-local/

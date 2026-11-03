@@ -1,0 +1,65 @@
+services:
+  mlflow:
+    build:
+      context: .
+      dockerfile: docker/mlflow.Dockerfile
+    image: churn-mlflow:1.0
+
+    command:
+      - mlflow
+      - server
+      - --backend-store-uri
+      - sqlite:////mlflow/mlflow.db
+      - --artifacts-destination
+      - /mlflow/mlartifacts
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+      - --allowed-hosts
+      - "localhost:*,127.0.0.1:*,mlflow:*"
+
+    ports:
+      - "127.0.0.1:5000:5000"
+
+    volumes:
+      - ./mlflow-local:/mlflow
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health')"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    restart: unless-stopped
+
+  api:
+    image: churn-api:1.0
+
+    ports:
+      - "127.0.0.1:8000:8000"
+
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+
+    depends_on:
+      mlflow:
+        condition: service_healthy
+
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+    restart: unless-stopped
