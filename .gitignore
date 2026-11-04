@@ -232,3 +232,5 @@ mlflow.db-*
 mlartifacts/
 mlruns/
 mlflow-local/
+
+scratch.py

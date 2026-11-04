@@ -5,9 +5,9 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-COPY requirements-api.txt .
+COPY requirements-api.lock.txt .
 
-RUN pip install --no-cache-dir -r requirements-api.txt
+RUN pip install --no-cache-dir -r requirements-api.lock.txt
 
 COPY src/ ./src/
 

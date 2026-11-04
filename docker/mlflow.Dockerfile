@@ -2,7 +2,9 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN pip install --no-cache-dir mlflow
+COPY requirements-mlflow.lock.txt .
+
+RUN pip install --no-cache-dir -r requirements-mlflow.lock.txt
 
 EXPOSE 5000
 
