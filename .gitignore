@@ -233,4 +233,11 @@ mlartifacts/
 mlruns/
 mlflow-local/
 
+# airflow
+airflow/airflow.db*
+airflow/airflow.cfg
+airflow/logs/
+airflow/simple_auth_manager_passwords*
+airflow/.pytest_cache/
+
 scratch.py

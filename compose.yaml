@@ -17,7 +17,7 @@ services:
       - --port
       - "5000"
       - --allowed-hosts
-      - "localhost:*,127.0.0.1:*,mlflow:*"
+      - "localhost:*,127.0.0.1:*,mlflow:*,host.docker.internal:*"
 
     ports:
       - "127.0.0.1:5000:5000"

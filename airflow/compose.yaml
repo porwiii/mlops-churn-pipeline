@@ -1,0 +1,20 @@
+services:
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: churn-airflow:1.0
+
+    command: standalone
+
+    ports:
+      - "127.0.0.1:8080:8080"
+
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      MLFLOW_TRACKING_URI: http://host.docker.internal:5000
+    
+    volumes:
+      - ./:/opt/airflow
+      - ../:/opt/project

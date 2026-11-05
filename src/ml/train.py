@@ -12,11 +12,6 @@ from src.ml.validate import validate_model
 from mlflow import MlflowClient
 
 
-df = pd.read_parquet("data/processed/churn")
-
-print(df.shape)
-print(df.dtypes)
-
 def train_model(df: pd.DataFrame):
     # Separate X and y
     y = df["Churn"]
