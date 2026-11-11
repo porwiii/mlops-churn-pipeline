@@ -19,8 +19,10 @@ services:
       - --allowed-hosts
       - "localhost:*,127.0.0.1:*,mlflow:*,host.docker.internal:*"
 
+    # ports:
+    #   - "127.0.0.1:5000:5000"
     ports:
-      - "127.0.0.1:5000:5000"
+      - "5000:5000"
 
     volumes:
       - ./mlflow-local:/mlflow
